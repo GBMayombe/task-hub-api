@@ -1,0 +1,32 @@
+{
+  "name": "task-hub-api",
+  "version": "1.0.0",
+  "description": "Task Hub Backend Server",
+  "keywords": [
+    "NodeJS",
+    "Task",
+    "Manager"
+  ],
+  "license": "MIT",
+  "author": "Gradie Mayombe",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@arcjet/inspect": "^1.14.1",
+    "@arcjet/node": "^1.14.1",
+    "@sendgrid/mail": "^8.1.6",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.8",
+    "express": "^4.22.3",
+    "express-zod-safe": "^3.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.11.2",
+    "morgan": "^1.12.1",
+    "zod": "^4.6.7"
+  }
+}
