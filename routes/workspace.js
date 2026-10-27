@@ -6,7 +6,10 @@ import {
   workspaceSchema,
   tokenSchema,
 } from '../libs/validate-schema.js';
-import { authMiddleware } from '../middleware/auth-middleware.js';
+import {
+  authenticateUser,
+  authorizeUser,
+} from '../middleware/auth-middleware.js';
 import {
   acceptGenerateInvite,
   acceptInviteByToken,
@@ -22,21 +25,22 @@ const router = express.Router();
 
 router.post(
   '/',
-  authMiddleware,
+  authenticateUser,
+  authorizeUser,
   validate({ body: workspaceSchema }),
   createWorkspace,
 );
 
 router.post(
   '/accept-invite-token',
-  authMiddleware,
+  authenticateUser,
   validate({ body: tokenSchema }),
   acceptInviteByToken,
 );
 
 router.post(
   '/:workspaceId/invite-member',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ workspaceId: z.string() }),
     body: inviteMemberSchema,
@@ -46,15 +50,15 @@ router.post(
 
 router.post(
   '/:workspaceId/accept-generate-invite',
-  authMiddleware,
+  authenticateUser,
   validate({ params: z.object({ workspaceId: z.string() }) }),
   acceptGenerateInvite,
 );
 
-router.get('/', authMiddleware, getWorkspaces);
+router.get('/', authenticateUser, getWorkspaces);
 
-router.get('/:workspaceId', authMiddleware, getWorkspaceDetails);
-router.get('/:workspaceId/projects', authMiddleware, getWorkspaceProjects);
-router.get('/:workspaceId/stats', authMiddleware, getWorkspaceStats);
+router.get('/:workspaceId', authenticateUser, getWorkspaceDetails);
+router.get('/:workspaceId/projects', authenticateUser, getWorkspaceProjects);
+router.get('/:workspaceId/stats', authenticateUser, getWorkspaceStats);
 
 export default router;

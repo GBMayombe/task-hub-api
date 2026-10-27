@@ -1,6 +1,6 @@
 import express from 'express';
 import validate from 'express-zod-safe';
-import { authMiddleware } from '../middleware/auth-middleware.js';
+import { authenticateUser } from '../middleware/auth-middleware.js';
 import {
   createProject,
   getProjectTasks,
@@ -13,7 +13,7 @@ const router = express.Router();
 
 router.post(
   '/:workspaceId/create-project',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ workspaceId: z.string() }),
     body: projectSchema,
@@ -23,7 +23,7 @@ router.post(
 
 router.get(
   '/:projectId',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ projectId: z.string() }),
   }),
@@ -32,7 +32,7 @@ router.get(
 
 router.get(
   '/:projectId/tasks',
-  authMiddleware,
+  authenticateUser,
   validate({ params: z.object({ projectId: z.string() }) }),
   getProjectTasks,
 );

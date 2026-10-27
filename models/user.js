@@ -11,6 +11,12 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
     },
     password: { type: String, required: true, select: false },
+    userType: {
+      type: String,
+      required: false,
+      default: 'user',
+      enum: ['admin', 'user'],
+    },
 
     profilePicture: { type: String },
 

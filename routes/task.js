@@ -20,13 +20,13 @@ import {
   updateTaskTitle,
   watchTask,
 } from '../controllers/task.js';
-import { authMiddleware } from '../middleware/auth-middleware.js';
+import { authenticateUser } from '../middleware/auth-middleware.js';
 
 const router = express.Router();
 
 router.post(
   '/:projectId/create-task',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({
       projectId: z.string(),
@@ -38,7 +38,7 @@ router.post(
 
 router.post(
   '/:taskId/add-subtask',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string() }),
     body: z.object({ title: z.string() }),
@@ -48,7 +48,7 @@ router.post(
 
 router.post(
   '/:taskId/add-comment',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string() }),
     body: z.object({ text: z.string() }),
@@ -58,7 +58,7 @@ router.post(
 
 router.post(
   '/:taskId/watch',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string() }),
   }),
@@ -67,7 +67,7 @@ router.post(
 
 router.post(
   '/:taskId/achieved',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string() }),
   }),
@@ -76,7 +76,7 @@ router.post(
 
 router.put(
   '/:taskId/update-subtask/:subTaskId',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string(), subTaskId: z.string() }),
     body: z.object({ completed: z.boolean() }),
@@ -86,7 +86,7 @@ router.put(
 
 router.put(
   '/:taskId/title',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string() }),
     body: z.object({ title: z.string() }),
@@ -96,7 +96,7 @@ router.put(
 
 router.put(
   '/:taskId/description',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string() }),
     body: z.object({ description: z.string() }),
@@ -106,7 +106,7 @@ router.put(
 
 router.put(
   '/:taskId/status',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string() }),
     body: z.object({ status: z.string() }),
@@ -116,7 +116,7 @@ router.put(
 
 router.put(
   '/:taskId/assignees',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string() }),
     body: z.object({ assignees: z.array(z.string()) }),
@@ -124,11 +124,11 @@ router.put(
   updateTaskAssignees,
 );
 
-router.get('/my-tasks', authMiddleware, getMyTasks);
+router.get('/my-tasks', authenticateUser, getMyTasks);
 
 router.put(
   '/:taskId/priority',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string() }),
     body: z.object({ priority: z.string() }),
@@ -138,7 +138,7 @@ router.put(
 
 router.get(
   '/:taskId',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({
       taskId: z.string(),
@@ -149,7 +149,7 @@ router.get(
 
 router.get(
   '/:resourceId/activity',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ resourceId: z.string() }),
   }),
@@ -158,7 +158,7 @@ router.get(
 
 router.get(
   '/:taskId/comments',
-  authMiddleware,
+  authenticateUser,
   validate({
     params: z.object({ taskId: z.string() }),
   }),
