@@ -19,6 +19,7 @@ import {
   getWorkspaces,
   getWorkspaceStats,
   inviteUserToWorkspace,
+  deleteWorkspace,
 } from '../controllers/workspace.js';
 
 const router = express.Router();
@@ -53,6 +54,16 @@ router.post(
   authenticateUser,
   validate({ params: z.object({ workspaceId: z.string() }) }),
   acceptGenerateInvite,
+);
+
+router.delete(
+  '/:workspaceId',
+  authenticateUser,
+  authorizeUser,
+  validate({
+    params: z.object({ workspaceId: z.string() }),
+  }),
+  deleteWorkspace,
 );
 
 router.get('/', authenticateUser, getWorkspaces);

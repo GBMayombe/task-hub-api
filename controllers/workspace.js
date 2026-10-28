@@ -34,6 +34,46 @@ export const createWorkspace = async (req, res) => {
   }
 };
 
+export const deleteWorkspace = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+
+    const workspace = await Workspace.findById(workspaceId);
+
+    if (!workspace) {
+      return res.status(404).json({
+        message: 'Workspace not found',
+      });
+    }
+
+    const projects = await Project.find({ workspace: workspaceId }).select(
+      '_id tasks',
+    );
+
+    const projectIds = projects.map((project) => project._id);
+    const taskIds = projects.flatMap((project) => project.tasks);
+
+    await Promise.all([
+      Task.deleteMany({
+        $or: [{ _id: { $in: taskIds } }, { project: { $in: projectIds } }],
+      }),
+      Project.deleteMany({ workspace: workspaceId }),
+      Workspace.findByIdAndDelete(workspaceId),
+    ]);
+
+    return res.status(200).json({
+      message:
+        'Workspace and its associated projects and tasks deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting workspace:', error);
+
+    return res.status(500).json({
+      message: 'Internal server error',
+    });
+  }
+};
+
 export const getWorkspaces = async (req, res) => {
   try {
     const workspaces = await Workspace.find({
@@ -121,6 +161,7 @@ export const getWorkspaceStats = async (req, res) => {
       });
     }
 
+    // Get workspace projects and their tasks
     const [totalProjects, projects] = await Promise.all([
       Project.countDocuments({ workspace: workspaceId }),
       Project.find({ workspace: workspaceId })
@@ -131,163 +172,165 @@ export const getWorkspaceStats = async (req, res) => {
         .sort({ createdAt: -1 }),
     ]);
 
-    const totalTasks = projects.reduce((acc, project) => {
-      return acc + project.tasks.length;
-    }, 0);
+    // Total tasks
+    const totalTasks = projects.reduce(
+      (total, project) => total + project.tasks.length,
+      0,
+    );
 
+    // Project statistics
     const totalProjectInProgress = projects.filter(
       (project) => project.status === 'In Progress',
     ).length;
-    // const totalProjectCompleted = projects.filter(
-    //   (project) => project.status === "Completed"
-    // ).length;
 
-    const totalTaskCompleted = projects.reduce((acc, project) => {
-      return (
-        acc + project.tasks.filter((task) => task.status === 'Done').length
-      );
-    }, 0);
-
-    const totalTaskToDo = projects.reduce((acc, project) => {
-      return (
-        acc + project.tasks.filter((task) => task.status === 'To Do').length
-      );
-    }, 0);
-
-    const totalTaskInProgress = projects.reduce((acc, project) => {
-      return (
-        acc +
-        project.tasks.filter((task) => task.status === 'In Progress').length
-      );
-    }, 0);
-
+    // Flatten tasks from workspace projects
     const tasks = projects.flatMap((project) => project.tasks);
 
-    // get upcoming task in next 7 days
+    // Task statistics
+    const totalTaskCompleted = tasks.filter(
+      (task) => task.status === 'Done',
+    ).length;
+
+    const totalTaskToDo = tasks.filter(
+      (task) => task.status === 'To Do',
+    ).length;
+
+    const totalTaskInProgress = tasks.filter(
+      (task) => task.status === 'In Progress',
+    ).length;
+
+    // Upcoming tasks due within the next 7 days
+    const today = new Date();
+    const nextSevenDays = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     const upcomingTasks = tasks.filter((task) => {
+      if (!task.dueDate) return false;
+
       const taskDate = new Date(task.dueDate);
-      const today = new Date();
-      return (
-        taskDate > today &&
-        taskDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
-      );
+
+      return taskDate > today && taskDate <= nextSevenDays;
     });
 
-    const taskTrendsData = [
-      { name: 'Sun', completed: 0, inProgress: 0, toDo: 0 },
-      { name: 'Mon', completed: 0, inProgress: 0, toDo: 0 },
-      { name: 'Tue', completed: 0, inProgress: 0, toDo: 0 },
-      { name: 'Wed', completed: 0, inProgress: 0, toDo: 0 },
-      { name: 'Thu', completed: 0, inProgress: 0, toDo: 0 },
-      { name: 'Fri', completed: 0, inProgress: 0, toDo: 0 },
-      { name: 'Sat', completed: 0, inProgress: 0, toDo: 0 },
-    ];
-
-    // get last 7 days tasks date
+    // Task trends for the last 7 days, including today
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
-      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - (6 - i));
       return date;
-    }).reverse();
+    });
 
-    // populate
-
-    for (const project of projects) {
-      for (const task in project.tasks) {
-        const taskDate = new Date(task.updatedAt);
-
-        const dayInDate = last7Days.findIndex(
-          (date) =>
-            date.getDate() === taskDate.getDate() &&
-            date.getMonth() === taskDate.getMonth() &&
-            date.getFullYear() === taskDate.getFullYear(),
-        );
-
-        if (dayInDate !== -1) {
-          const dayName = last7Days[dayInDate].toLocaleDateString('en-US', {
-            weekday: 'short',
-          });
-
-          const dayData = taskTrendsData.find((day) => day.name === dayName);
-
-          if (dayData) {
-            switch (task.status) {
-              case 'Done':
-                dayData.completed++;
-                break;
-              case 'In Progress':
-                dayData.inProgress++;
-                break;
-              case 'To Do':
-                dayData.toDo++;
-                break;
-            }
-          }
-        }
-      }
-    }
-
-    // get project status distribution
-    const projectStatusData = [
-      { name: 'Completed', value: 0, color: '#10b981' },
-      { name: 'In Progress', value: 0, color: '#3b82f6' },
-      { name: 'Planning', value: 0, color: '#f59e0b' },
-    ];
-
-    for (const project of projects) {
-      switch (project.status) {
-        case 'Completed':
-          projectStatusData[0].value++;
-          break;
-        case 'In Progress':
-          projectStatusData[1].value++;
-          break;
-        case 'Planning':
-          projectStatusData[2].value++;
-          break;
-      }
-    }
-
-    // Task priority distribution
-    const taskPriorityData = [
-      { name: 'High', value: 0, color: '#ef4444' },
-      { name: 'Medium', value: 0, color: '#f59e0b' },
-      { name: 'Low', value: 0, color: '#6b7280' },
-    ];
+    const taskTrendsData = last7Days.map((date) => ({
+      name: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      completed: 0,
+      inProgress: 0,
+      toDo: 0,
+    }));
 
     for (const task of tasks) {
-      switch (task.priority) {
-        case 'High':
-          taskPriorityData[0].value++;
+      if (!task.updatedAt) continue;
+
+      const taskDate = new Date(task.updatedAt);
+      taskDate.setHours(0, 0, 0, 0);
+
+      const dayIndex = last7Days.findIndex(
+        (date) => date.getTime() === taskDate.getTime(),
+      );
+
+      if (dayIndex === -1) continue;
+
+      switch (task.status) {
+        case 'Done':
+          taskTrendsData[dayIndex].completed++;
           break;
-        case 'Medium':
-          taskPriorityData[1].value++;
+        case 'In Progress':
+          taskTrendsData[dayIndex].inProgress++;
           break;
-        case 'Low':
-          taskPriorityData[2].value++;
+        case 'To Do':
+          taskTrendsData[dayIndex].toDo++;
           break;
       }
     }
 
-    const workspaceProductivityData = [];
+    // Project status distribution for this workspace
+    const projectStatusColors = {
+      Completed: '#10b981',
+      'In Progress': '#3b82f6',
+      Planning: '#f59e0b',
+      'On Hold': '#f97316',
+      Cancelled: '#ef4444',
+    };
 
-    for (const project of projects) {
-      const projectTask = tasks.filter(
-        (task) => task.project.toString() === project._id.toString(),
+    const projectStatusCounts = projects.reduce(
+      (counts, project) => {
+        if (Object.hasOwn(counts, project.status)) {
+          counts[project.status]++;
+        }
+
+        return counts;
+      },
+      {
+        Completed: 0,
+        'In Progress': 0,
+        Planning: 0,
+        'On Hold': 0,
+        Cancelled: 0,
+      },
+    );
+
+    const projectStatusData = Object.entries(projectStatusCounts).map(
+      ([name, value]) => ({
+        name,
+        value,
+        color: projectStatusColors[name],
+      }),
+    );
+
+    // Task priority distribution
+    const taskPriorityColors = {
+      High: '#ef4444',
+      Medium: '#f59e0b',
+      Low: '#6b7280',
+    };
+
+    const taskPriorityCounts = tasks.reduce(
+      (counts, task) => {
+        if (Object.hasOwn(counts, task.priority)) {
+          counts[task.priority]++;
+        }
+
+        return counts;
+      },
+      {
+        High: 0,
+        Medium: 0,
+        Low: 0,
+      },
+    );
+
+    const taskPriorityData = Object.entries(taskPriorityCounts).map(
+      ([name, value]) => ({
+        name,
+        value,
+        color: taskPriorityColors[name],
+      }),
+    );
+
+    // Workspace productivity per project
+    const workspaceProductivityData = projects.map((project) => {
+      const projectTasks = project.tasks;
+
+      const completedTasks = projectTasks.filter(
+        (task) => task.status === 'Done' && !task.isArchived,
       );
 
-      const completedTask = projectTask.filter(
-        (task) => task.status === 'Done' && task.isArchived === false,
-      );
-
-      workspaceProductivityData.push({
+      return {
         name: project.title,
-        completed: completedTask.length,
-        total: projectTask.length,
-      });
-    }
+        completed: completedTasks.length,
+        total: projectTasks.length,
+      };
+    });
 
+    // Summary statistics
     const stats = {
       totalProjects,
       totalTasks,
@@ -297,7 +340,7 @@ export const getWorkspaceStats = async (req, res) => {
       totalTaskInProgress,
     };
 
-    res.status(200).json({
+    return res.status(200).json({
       stats,
       taskTrendsData,
       projectStatusData,
@@ -307,8 +350,9 @@ export const getWorkspaceStats = async (req, res) => {
       recentProjects: projects.slice(0, 5),
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    console.error('Error fetching workspace stats:', error);
+
+    return res.status(500).json({
       message: 'Internal server error',
     });
   }
@@ -490,8 +534,9 @@ export const acceptInviteByToken = async (req, res) => {
     }
 
     const inviteInfo = await WorkspaceInvite.findOne({
-      user: user,
-      workspaceId: workspaceId,
+      user,
+      workspaceId,
+      token,
     });
 
     if (!inviteInfo) {
@@ -506,13 +551,37 @@ export const acceptInviteByToken = async (req, res) => {
       });
     }
 
+    // Add the user to the workspace.
     workspace.members.push({
-      user: user,
+      user,
       role: role || 'member',
       joinedAt: new Date(),
     });
 
     await workspace.save();
+
+    // Find all projects referencing this workspace.
+    const projects = await Project.find({
+      workspace: workspace._id,
+    });
+
+    // Add the user to every project, avoiding duplicates.
+    await Promise.all(
+      projects.map(async (project) => {
+        const isProjectMember = project.members.some(
+          (member) => member.user.toString() === user.toString(),
+        );
+
+        if (!isProjectMember) {
+          project.members.push({
+            user,
+            role: role === 'viewer' ? 'viewer' : 'contributor',
+          });
+
+          await project.save();
+        }
+      }),
+    );
 
     await Promise.all([
       WorkspaceInvite.deleteOne({ _id: inviteInfo._id }),
@@ -521,12 +590,12 @@ export const acceptInviteByToken = async (req, res) => {
       }),
     ]);
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Invitation accepted successfully',
     });
   } catch (error) {
     console.log(error);
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Internal server error',
     });
   }

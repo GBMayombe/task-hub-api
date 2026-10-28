@@ -8,6 +8,7 @@ import {
   addComment,
   addSubTask,
   createTask,
+  deleteTask,
   getActivityByResourceId,
   getCommentsByTaskId,
   getMyTasks,
@@ -20,7 +21,10 @@ import {
   updateTaskTitle,
   watchTask,
 } from '../controllers/task.js';
-import { authenticateUser } from '../middleware/auth-middleware.js';
+import {
+  authenticateUser,
+  authorizeUser,
+} from '../middleware/auth-middleware.js';
 
 const router = express.Router();
 
@@ -34,6 +38,16 @@ router.post(
     body: taskSchema,
   }),
   createTask,
+);
+
+router.delete(
+  '/:taskId',
+  authenticateUser,
+  authorizeUser,
+  validate({
+    params: z.object({ taskId: z.string() }),
+  }),
+  deleteTask,
 );
 
 router.post(

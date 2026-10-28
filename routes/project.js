@@ -1,10 +1,14 @@
 import express from 'express';
 import validate from 'express-zod-safe';
-import { authenticateUser } from '../middleware/auth-middleware.js';
+import {
+  authenticateUser,
+  authorizeUser,
+} from '../middleware/auth-middleware.js';
 import {
   createProject,
   getProjectTasks,
   getProjectDetails,
+  deleteProject,
 } from '../controllers/project.js';
 import { projectSchema } from '../libs/validate-schema.js';
 import { z } from 'zod';
@@ -19,6 +23,16 @@ router.post(
     body: projectSchema,
   }),
   createProject,
+);
+
+router.delete(
+  '/:projectId',
+  authenticateUser,
+  authorizeUser,
+  validate({
+    params: z.object({ projectId: z.string() }),
+  }),
+  deleteProject,
 );
 
 router.get(

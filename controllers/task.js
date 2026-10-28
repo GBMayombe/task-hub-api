@@ -60,6 +60,35 @@ const createTask = async (req, res) => {
   }
 };
 
+export const deleteTask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+
+    const task = await Task.findById(taskId);
+
+    if (!task) {
+      return res.status(404).json({
+        message: 'Task not found',
+      });
+    }
+
+    await Promise.all([
+      Project.updateOne({ _id: task.project }, { $pull: { tasks: task._id } }),
+      Task.findByIdAndDelete(taskId),
+    ]);
+
+    return res.status(200).json({
+      message: 'Task deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting task:', error);
+
+    return res.status(500).json({
+      message: 'Internal server error',
+    });
+  }
+};
+
 const getTaskById = async (req, res) => {
   try {
     const { taskId } = req.params;
