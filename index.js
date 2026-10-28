@@ -12,14 +12,7 @@ const PORT = process.env.PORT || 5000;
 
 const app = express();
 app.use(express.json());
-app.use(
-  // https://expressjs.com/en/resources/middleware/cors/#configuration-options
-  cors({
-    origin: process.env.FRONTEND_URL,
-    methods: ['POST', 'PUT', 'DELETE', 'GET'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  }),
-);
+app.use(cors());
 app.use(morgan('dev'));
 
 // db connection
