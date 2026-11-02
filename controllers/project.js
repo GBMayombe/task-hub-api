@@ -5,8 +5,7 @@ import Task from '../models/task.js';
 export const createProject = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { title, description, status, startDate, dueDate, tags, members } =
-      req.body;
+    const { title, description, status, startDate, dueDate, tags, members } = req.body;
 
     const workspace = await Workspace.findById(workspaceId);
 
@@ -64,10 +63,13 @@ export const deleteProject = async (req, res) => {
       });
     }
 
-    await Promise.all([
-      Task.deleteMany({
+    if (project.tasks.length > 0) {
+      await Task.deleteMany({
         $or: [{ _id: { $in: project.tasks } }, { project: projectId }],
-      }),
+      });
+    }
+
+    await Promise.all([
       Workspace.updateOne(
         { _id: project.workspace },
         { $pull: { projects: project._id } },
