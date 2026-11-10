@@ -46,7 +46,9 @@ export const deleteWorkspace = async (req, res) => {
       });
     }
 
-    const projects = await Project.find({ workspace: workspaceId }).select('_id tasks');
+    const projects = await Project.find({ workspace: workspaceId }).select(
+      '_id tasks',
+    );
 
     if (projects.length > 0) {
       const projectIds = projects.map((project) => project._id);
@@ -66,7 +68,8 @@ export const deleteWorkspace = async (req, res) => {
     await Workspace.findByIdAndDelete(workspaceId);
 
     return res.status(200).json({
-      message: 'Workspace and its associated projects and tasks deleted successfully',
+      message:
+        'Workspace and its associated projects and tasks deleted successfully',
     });
   } catch (error) {
     console.error('Error deleting workspace:', error);
@@ -168,7 +171,10 @@ export const getWorkspaceStats = async (req, res) => {
     const [totalProjects, projects] = await Promise.all([
       Project.countDocuments({ workspace: workspaceId }),
       Project.find({ workspace: workspaceId })
-        .populate('tasks', 'title status dueDate project updatedAt isArchived priority')
+        .populate(
+          'tasks',
+          'title status dueDate project updatedAt isArchived priority',
+        )
         .sort({ createdAt: -1 }),
     ]);
 
@@ -187,9 +193,13 @@ export const getWorkspaceStats = async (req, res) => {
     const tasks = projects.flatMap((project) => project.tasks);
 
     // Task statistics
-    const totalTaskCompleted = tasks.filter((task) => task.status === 'Done').length;
+    const totalTaskCompleted = tasks.filter(
+      (task) => task.status === 'Done',
+    ).length;
 
-    const totalTaskToDo = tasks.filter((task) => task.status === 'To Do').length;
+    const totalTaskToDo = tasks.filter(
+      (task) => task.status === 'To Do',
+    ).length;
 
     const totalTaskInProgress = tasks.filter(
       (task) => task.status === 'In Progress',
@@ -216,7 +226,7 @@ export const getWorkspaceStats = async (req, res) => {
     });
 
     const taskTrendsData = last7Days.map((date) => ({
-      name: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      name: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
       completed: 0,
       inProgress: 0,
       toDo: 0,
@@ -303,11 +313,13 @@ export const getWorkspaceStats = async (req, res) => {
       },
     );
 
-    const taskPriorityData = Object.entries(taskPriorityCounts).map(([name, value]) => ({
-      name,
-      value,
-      color: taskPriorityColors[name],
-    }));
+    const taskPriorityData = Object.entries(taskPriorityCounts).map(
+      ([name, value]) => ({
+        name,
+        value,
+        color: taskPriorityColors[name],
+      }),
+    );
 
     // Workspace productivity per project
     const workspaceProductivityData = projects.map((project) => {
@@ -433,7 +445,11 @@ export const inviteUserToWorkspace = async (req, res) => {
       <p>Click here to join: <a href="${invitationLink}">${invitationLink}</a></p>
     `;
 
-    await sendEmail(email, 'You have been invited to join a workspace', emailContent);
+    await sendEmail(
+      email,
+      'You have been invited to join a workspace',
+      emailContent,
+    );
 
     res.status(200).json({
       message: 'Invitation sent successfully',
@@ -476,9 +492,15 @@ export const acceptGenerateInvite = async (req, res) => {
 
     await workspace.save();
 
-    await recordActivity(req.user._id, 'joined_workspace', 'Workspace', workspaceId, {
-      description: `Joined ${workspace.name} workspace`,
-    });
+    await recordActivity(
+      req.user._id,
+      'joined_workspace',
+      'Workspace',
+      workspaceId,
+      {
+        description: `Joined ${workspace.name} workspace`,
+      },
+    );
 
     res.status(200).json({
       message: 'Invitation accepted successfully',

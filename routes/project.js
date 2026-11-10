@@ -6,6 +6,7 @@ import {
 } from '../middleware/auth-middleware.js';
 import {
   createProject,
+  updateProject,
   getProjectTasks,
   getProjectDetails,
   deleteProject,
@@ -24,6 +25,8 @@ router.post(
   }),
   createProject,
 );
+
+router.put('/:projectId', authenticateUser, updateProject);
 
 router.delete(
   '/:projectId',

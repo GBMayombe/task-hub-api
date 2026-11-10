@@ -5,7 +5,8 @@ import Task from '../models/task.js';
 export const createProject = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { title, description, status, startDate, dueDate, tags, members } = req.body;
+    const { title, description, status, startDate, dueDate, tags, members } =
+      req.body;
 
     const workspace = await Workspace.findById(workspaceId);
 
@@ -25,7 +26,7 @@ export const createProject = async (req, res) => {
       });
     }
 
-    const tagArray = tags ? tags.split(',') : [];
+    const tagArray = tags ? tags : [];
 
     const newProject = await Project.create({
       title,
@@ -43,6 +44,47 @@ export const createProject = async (req, res) => {
     await workspace.save();
 
     return res.status(201).json(newProject);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: 'Internal server error',
+    });
+  }
+};
+
+export const updateProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { title, description, status, startDate, dueDate, tags } = req.body;
+
+    const project = await Project.findById(projectId);
+
+    if (!project) {
+      return res.status(404).json({
+        message: 'Project not found',
+      });
+    }
+
+    // Update only the fields provided
+    if (title !== undefined) project.title = title;
+    if (description !== undefined) project.description = description;
+    if (status !== undefined) project.status = status;
+    if (startDate !== undefined) project.startDate = startDate;
+    if (dueDate !== undefined) project.dueDate = dueDate;
+
+    if (tags !== undefined) {
+      project.tags =
+        typeof tags === 'string'
+          ? tags.split(',').map((tag) => tag.trim())
+          : [];
+    }
+
+    await project.save();
+
+    return res.status(200).json({
+      message: 'Project updated successfully',
+      project,
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({
